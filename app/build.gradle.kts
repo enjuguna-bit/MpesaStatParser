@@ -1,8 +1,38 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.kapt")
+    id("com.google.devtools.ksp")
     id("org.jetbrains.kotlin.plugin.compose")
+}
+
+import java.util.Properties
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+fun signingProperty(name: String): String? {
+    return providers.gradleProperty(name).orNull
+        ?: providers.environmentVariable(name).orNull
+        ?: localProperties.getProperty(name)
+}
+
+val releaseStoreFilePath = signingProperty("MYAPP_UPLOAD_STORE_FILE")
+val releaseKeyAlias = signingProperty("MYAPP_UPLOAD_KEY_ALIAS")
+val releaseStorePassword = signingProperty("MYAPP_UPLOAD_STORE_PASSWORD")
+val releaseKeyPassword = signingProperty("MYAPP_UPLOAD_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    releaseStoreFilePath,
+    releaseKeyAlias,
+    releaseStorePassword,
+    releaseKeyPassword
+).all { !it.isNullOrBlank() }
+val isReleaseTaskRequested = gradle.startParameter.taskNames.any { task ->
+    val normalized = task.lowercase()
+    normalized.contains("release") || normalized.contains("bundle") || normalized.contains("publish")
 }
 
 android {
@@ -20,19 +50,15 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            val storeFilePath = providers.gradleProperty("MYAPP_UPLOAD_STORE_FILE")
-                .orElse("C:/BulkSMS2/Erick-release-keystore.jks")
-                .get()
-            storeFile = file(storeFilePath)
-            storePassword = providers.gradleProperty("MYAPP_UPLOAD_STORE_PASSWORD").orNull
-                ?: System.getenv("MYAPP_UPLOAD_STORE_PASSWORD")
-            keyAlias = providers.gradleProperty("MYAPP_UPLOAD_KEY_ALIAS").orNull
-                ?: System.getenv("MYAPP_UPLOAD_KEY_ALIAS")
-            keyPassword = providers.gradleProperty("MYAPP_UPLOAD_KEY_PASSWORD").orNull
-                ?: System.getenv("MYAPP_UPLOAD_KEY_PASSWORD")
-            enableV1Signing = true
-            enableV2Signing = true
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseStoreFilePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+                enableV1Signing = true
+                enableV2Signing = true
+            }
         }
     }
 
@@ -41,7 +67,11 @@ android {
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            } else if (isReleaseTaskRequested) {
+                logger.warn("Release signing is not configured. Set MYAPP_UPLOAD_* via -P, environment, or local.properties before release builds.")
+            }
         }
     }
 
@@ -87,7 +117,7 @@ dependencies {
     // Local persistence
     implementation("androidx.room:room-runtime:2.7.0")
     implementation("androidx.room:room-ktx:2.7.0")
-    kapt("androidx.room:room-compiler:2.7.0")
+    ksp("androidx.room:room-compiler:2.7.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

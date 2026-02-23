@@ -17,7 +17,6 @@ import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
-import android.util.Log
 
 class AccountingAnalyzer {
 
@@ -178,7 +177,6 @@ class AccountingAnalyzer {
         val scoreComponents = scoringResult.scoreComponents
         val credibilityScore = scoringResult.credibilityScore
         val credibilityBand = scoringResult.credibilityBand
-        Log.d("AccountingAnalyzer", "Computed score: $credibilityScore, band: $credibilityBand")
         val riskAnalyzer = RiskSignalAnalyzer()
         val riskSignals = riskAnalyzer.analyzeRisks(
             inflowOutflowRatio, savingsRate, netCashflow, minimumBalance, lowBalanceDayRatio, completionRate,
@@ -186,7 +184,6 @@ class AccountingAnalyzer {
         )
         val strengths = riskSignals.strengths
         val risks = riskSignals.riskSignals
-        Log.d("AccountingAnalyzer", "Analyzed risks: ${strengths.size} strengths, ${risks.size} risks")
 
         return AccountingInsights(
             periodStart = periodStart,
@@ -242,174 +239,6 @@ class AccountingAnalyzer {
             riskSignals = risks,
             monthlyBreakdown = monthlyBreakdown
         )
-    }
-
-    private fun buildScoreComponents(
-        inflowOutflowRatio: Double,
-        savingsRate: Double,
-        averageBalance: Double,
-        minimumBalance: Double,
-        lowBalanceDayRatio: Double,
-        completionRate: Double,
-        parseRate: Double,
-        incomeStability: Double,
-        expenseStability: Double,
-        obligationBurdenRatio: Double,
-        top3CounterpartyShare: Double,
-        highValueNet: Double,
-        debitPressureRatio: Double,
-        totalInflow: Double,
-        config: ScoringConfig
-    ): List<ScoreComponent> {
-        val cashflowNorm = (
-            0.7 * scale(inflowOutflowRatio, min = 0.60, max = 1.60) +
-                0.3 * scale(savingsRate, min = -0.25, max = 0.35)
-            ).coerceIn(0.0, 1.0)
-        val liquidityNorm = (
-            0.4 * scale(averageBalance, min = 1000.0, max = 20000.0) +
-                0.35 * scale(minimumBalance, min = -500.0, max = 5000.0) +
-                0.25 * (1.0 - lowBalanceDayRatio).coerceIn(0.0, 1.0)
-            ).coerceIn(0.0, 1.0)
-        val reliabilityNorm = (
-            0.8 * completionRate.coerceIn(0.0, 1.0) +
-                0.2 * parseRate.coerceIn(0.0, 1.0)
-            ).coerceIn(0.0, 1.0)
-        val incomeNorm = incomeStability.coerceIn(0.0, 1.0)
-        val expenseNorm = expenseStability.coerceIn(0.0, 1.0)
-        val obligationNorm = (1.0 - scale(obligationBurdenRatio, min = 0.08, max = 0.45)).coerceIn(0.0, 1.0)
-        val diversificationNorm = (1.0 - scale(top3CounterpartyShare, min = 0.35, max = 0.90)).coerceIn(0.0, 1.0)
-        val highValueNetRatio = if (totalInflow > 0.0) highValueNet / totalInflow else 0.0
-        val highValueNorm = (
-            0.6 * scale(highValueNetRatio, min = -0.40, max = 0.30) +
-                0.4 * (1.0 - scale(debitPressureRatio, min = 0.25, max = 0.80))
-            ).coerceIn(0.0, 1.0)
-
-        return listOf(
-            scoreComponent("Cashflow Sustainability", config.cashflowWeight, cashflowNorm),
-            scoreComponent("Liquidity Health", config.liquidityWeight, liquidityNorm),
-            scoreComponent("Transaction Reliability", config.reliabilityWeight, reliabilityNorm),
-            scoreComponent("Income Stability", config.incomeStabilityWeight, incomeNorm),
-            scoreComponent("Expense Stability", config.expenseStabilityWeight, expenseNorm),
-            scoreComponent("Obligation Burden", config.obligationWeight, obligationNorm),
-            scoreComponent("Counterparty Diversification", config.diversificationWeight, diversificationNorm),
-            scoreComponent("High-Value Behaviour", config.highValueBehaviorWeight, highValueNorm)
-        )
-    }
-
-    private fun scoreComponent(name: String, maxPoints: Int, normalizedScore: Double): ScoreComponent {
-        val points = (maxPoints * normalizedScore.coerceIn(0.0, 1.0)).roundToInt().coerceIn(0, maxPoints)
-        return ScoreComponent(name = name, points = points, maxPoints = maxPoints)
-    }
-
-    private fun credibilityBand(score: Int, transactions: Int, activeMonths: Int): CredibilityBand {
-        if (transactions < 10 || activeMonths == 0) {
-            return CredibilityBand.INSUFFICIENT_DATA
-        }
-        return when {
-            score >= 82 -> CredibilityBand.EXCELLENT
-            score >= 68 -> CredibilityBand.GOOD
-            score >= 54 -> CredibilityBand.MODERATE
-            score >= 40 -> CredibilityBand.CAUTION
-            else -> CredibilityBand.HIGH_RISK
-        }
-    }
-
-    private fun buildStrengths(
-        inflowOutflowRatio: Double,
-        savingsRate: Double,
-        netCashflow: Double,
-        completionRate: Double,
-        averageBalance: Double,
-        monthlyConsistency: Double,
-        highValueCreditTotal: Double,
-        highValueDebitTotal: Double,
-        topCounterpartyShare: Double,
-        obligationBurdenRatio: Double,
-        lowBalanceDayRatio: Double,
-        incomeStability: Double
-    ): List<String> {
-        val strengths = mutableListOf<String>()
-        if (inflowOutflowRatio >= 1.10) {
-            strengths.add("Inflow-to-outflow ratio is strong, indicating positive coverage of obligations")
-        }
-        if (savingsRate >= 0.12) {
-            strengths.add("Healthy savings rate from transaction inflows")
-        }
-        if (netCashflow > 0.0) {
-            strengths.add("Positive net cashflow across the statement period")
-        }
-        if (completionRate >= 0.97) {
-            strengths.add("Very high completion rate with minimal failed or reversed transactions")
-        }
-        if (averageBalance >= 5000.0 && lowBalanceDayRatio <= 0.20) {
-            strengths.add("Stable liquidity with low exposure to low-balance days")
-        }
-        if (monthlyConsistency >= 0.65) {
-            strengths.add("Cashflow behavior is relatively consistent month to month")
-        }
-        if (incomeStability >= 0.65) {
-            strengths.add("Income pattern is stable across months")
-        }
-        if (obligationBurdenRatio <= 0.15) {
-            strengths.add("Charge and loan burden remains controlled")
-        }
-        if (highValueCreditTotal > highValueDebitTotal && highValueCreditTotal > 0.0) {
-            strengths.add("Large transactions are net-positive")
-        }
-        if (topCounterpartyShare <= 0.35) {
-            strengths.add("Transaction movement is reasonably diversified across counterparties")
-        }
-        return strengths.distinct().take(6)
-    }
-
-    private fun buildRiskSignals(
-        inflowOutflowRatio: Double,
-        savingsRate: Double,
-        minimumBalance: Double,
-        lowBalanceDayRatio: Double,
-        completionRate: Double,
-        obligationBurdenRatio: Double,
-        debitPressureRatio: Double,
-        incomeStability: Double,
-        expenseStability: Double,
-        topCounterpartyShare: Double,
-        parseRate: Float
-    ): List<String> {
-        val risks = mutableListOf<String>()
-        if (inflowOutflowRatio < 0.95) {
-            risks.add("Inflow-to-outflow ratio is below sustainable range")
-        }
-        if (savingsRate < 0.0) {
-            risks.add("Negative savings rate: outflows exceed inflows")
-        }
-        if (minimumBalance < 500.0) {
-            risks.add("Low liquidity buffer: minimum running balance dropped below KES 500")
-        }
-        if (lowBalanceDayRatio >= 0.35) {
-            risks.add("Frequent low-balance days increase payment-failure risk")
-        }
-        if (completionRate < 0.95) {
-            risks.add("Elevated failed or reversed transaction rate")
-        }
-        if (obligationBurdenRatio >= 0.25) {
-            risks.add("Charge and loan burden is high relative to total outflows")
-        }
-        if (debitPressureRatio >= 0.50) {
-            risks.add("High-value debits consume at least half of cash outflows")
-        }
-        if (incomeStability < 0.40) {
-            risks.add("Monthly inflows are volatile")
-        }
-        if (expenseStability < 0.40) {
-            risks.add("Monthly outflows are volatile")
-        }
-        if (topCounterpartyShare >= 0.45) {
-            risks.add("Counterparty concentration is high, increasing dependency risk")
-        }
-        if (parseRate < 0.92f) {
-            risks.add("Parse quality below 92%; verify source statement for completeness")
-        }
-        return risks.distinct().take(6)
     }
 
     private fun buildMonthlyBreakdownFromEntries(entries: List<Pair<MpesaTransaction, LocalDateTime>>): List<MonthlyCashflow> {

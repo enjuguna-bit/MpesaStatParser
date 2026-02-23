@@ -15,7 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -44,9 +44,15 @@ fun ReportsScreen(
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
-    var thresholdText by remember { mutableStateOf(uiState.scoringConfig.highValueThreshold.toInt().toString()) }
-    var reliabilityText by remember { mutableStateOf(uiState.scoringConfig.reliabilityWeight.toString()) }
-    var obligationText by remember { mutableStateOf(uiState.scoringConfig.obligationWeight.toString()) }
+    var thresholdText by remember(uiState.scoringConfig.highValueThreshold) {
+        mutableStateOf(uiState.scoringConfig.highValueThreshold.toInt().toString())
+    }
+    var reliabilityText by remember(uiState.scoringConfig.reliabilityWeight) {
+        mutableStateOf(uiState.scoringConfig.reliabilityWeight.toString())
+    }
+    var obligationText by remember(uiState.scoringConfig.obligationWeight) {
+        mutableStateOf(uiState.scoringConfig.obligationWeight.toString())
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Card(colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))) {
@@ -145,7 +151,7 @@ fun ReportsScreen(
                                 Text("Risks: ${item.risks}", style = MaterialTheme.typography.bodySmall)
                             }
                         }
-                        Divider()
+                        HorizontalDivider()
                     }
                 }
             }

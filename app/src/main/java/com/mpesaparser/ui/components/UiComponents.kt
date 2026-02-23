@@ -68,7 +68,7 @@ fun AccountingInsightsCard(insights: AccountingInsights) {
                 "Credibility ${insights.credibilityScore}/100 (${insights.credibilityBand.label})",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
-            LinearProgressIndicator(progress = scoreProgress, modifier = Modifier.fillMaxWidth())
+            LinearProgressIndicator(progress = { scoreProgress }, modifier = Modifier.fillMaxWidth())
             Text(
                 "High-value activity (> KES ${String.format(Locale.US, "%,.0f", insights.highValueThreshold)}): In ${insights.highValueCreditCount} | Out ${insights.highValueDebitCount}",
                 style = MaterialTheme.typography.bodySmall

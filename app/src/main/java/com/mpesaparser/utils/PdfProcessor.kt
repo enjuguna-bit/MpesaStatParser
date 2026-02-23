@@ -80,7 +80,7 @@ class PdfProcessor {
                     transactions = deduplicated,
                     diagnostics = ParseDiagnostics(
                         candidateRows = candidateRows,
-                        parsedRows = deduplicated.size.takeIf { it > 0 } ?: parsedRows,
+                        parsedRows = parsedRows,
                         unmatchedSamples = unmatchedSamples,
                         duplicatesRemoved = duplicatesRemoved,
                         parserMode = parserMode
@@ -157,7 +157,11 @@ class PdfProcessor {
                 continue
             }
 
-            val amountAndBalance = parseAmountAndBalance(resolvedStatusLine) ?: continue
+            val amountAndBalance = parseAmountAndBalance(resolvedStatusLine)
+            if (amountAndBalance == null) {
+                recordUnmatched(unmatched, "$reference $date $time ${detailsParts.joinToString(" ")} $resolvedStatusLine")
+                continue
+            }
             val details = detailsParts.joinToString(" ")
                 .replace(Regex("""\s+"""), " ")
                 .trim()

@@ -32,11 +32,12 @@ Android app for parsing M-Pesa PDF statements into transaction data, categorizin
 
 1. Open the project in Android Studio.
 2. Ensure your `local.properties` points to a valid Android SDK.
-3. Configure signing values for release builds (recommended: local-only or environment variables):
+3. Configure signing values for release builds (local-only, environment variables, or `-P` properties):
    - `MYAPP_UPLOAD_STORE_FILE`
    - `MYAPP_UPLOAD_KEY_ALIAS`
    - `MYAPP_UPLOAD_STORE_PASSWORD`
    - `MYAPP_UPLOAD_KEY_PASSWORD`
+   - You can put these in `local.properties` for machine-local use (recommended, file is gitignored).
 4. Sync Gradle.
 5. Run the app on an emulator/device.
 

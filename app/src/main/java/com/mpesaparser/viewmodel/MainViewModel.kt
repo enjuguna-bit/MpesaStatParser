@@ -90,7 +90,7 @@ class MainViewModel : ViewModel() {
             _uiState.value = _uiState.value.copy(errorMessage = "Password cannot be empty")
             return
         }
-        if (uri == null || uri.scheme != "content") {
+        if (uri.scheme != "content") {
             _uiState.value = _uiState.value.copy(errorMessage = "Invalid file selected")
             return
         }

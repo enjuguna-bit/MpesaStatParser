@@ -64,7 +64,7 @@ fun ProcessingSection(uiState: UiState, onCancel: () -> Unit) {
         Card {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Processing statement...", style = MaterialTheme.typography.titleMedium)
-                LinearProgressIndicator(progress = uiState.progress, modifier = Modifier.fillMaxWidth())
+                LinearProgressIndicator(progress = { uiState.progress }, modifier = Modifier.fillMaxWidth())
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("${(uiState.progress * 100).toInt()}%")
                     OutlinedButton(onClick = onCancel) { Text("Cancel") }
