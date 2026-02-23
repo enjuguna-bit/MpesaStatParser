@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">M-Pesa Parser</string>
+    <string name="select_statement">Select M-Pesa Statement</string>
+    <string name="enter_password">Enter PDF Password</string>
+    <string name="process">Process</string>
+    <string name="download">Download Accounting Report</string>
+</resources>
